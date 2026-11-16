@@ -7,6 +7,10 @@ It's staged in **Pebblewick**, the 3D town from the `forest-mockup` prototype. T
 and each card flies the camera to its location (your room, your front yard, the town square, the bakery, Mom's house…)
 while the day/night clock moves from Monday morning to Friday night, then on to Month One.
 
+## Play it online
+
+https://monohia-hub.github.io/TestBiz/ (GitHub Pages, served straight from `main`; the repo is public, so the page is too).
+
 ## Run it
 
 Needs Node (no install step). From this folder:
@@ -110,6 +114,10 @@ Interpretations of the pitch worth checking:
 Save an image into `art/` named after its slot id (e.g. `art/char_mom.png`) and reload. The placeholder is replaced
 automatically. Characters and reactions stand in front of the town like cut-outs, so transparent PNGs work best.
 See `ART_ASSETS.md` for the full list and briefs.
+
+The live GitHub Pages site has no server to list the folder, so it reads `art/_list.json` instead. When you push art,
+add each file name to that list too, e.g. `["char_mom.png", "react_mom_beaming.png"]`. `node server.js` ignores the
+file and lists the folder itself.
 
 `?fast=1` on the URL skips animations and camera flights and makes card transitions synchronous; it exists for automated
 path testing.
