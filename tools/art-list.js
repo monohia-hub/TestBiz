@@ -10,17 +10,19 @@ const mark = (id, where) => (used[id] = used[id] || new Set()).add(where);
 const markChoice = (c, where) => {
   if (c.outcome) mark(c.outcome.art, `${where} → ${c.short}`);
   if (c.gamble) {
-    mark(c.gamble.win.outcome.art, `${where} → ${c.short} (jackpot)`);
-    mark(c.gamble.lose.outcome.art, `${where} → ${c.short} (bust)`);
+    mark(c.gamble.win.outcome.art, `${where} → ${c.short} (good roll)`);
+    mark(c.gamble.lose.outcome.art, `${where} → ${c.short} (bad roll)`);
   }
 };
 
-S.WEEK_ONE.scenes.forEach((sc) => {
-  const where = `L1 ${sc.day}: ${sc.title}`;
-  sc.cast.forEach((id) => mark(id, where));
-  if (sc.prop) mark(sc.prop, where);
-  sc.choices.forEach((c) => markChoice(c, where));
-});
+S.WEEK_ONE.days.forEach((d) =>
+  d.spots.forEach((sc) => {
+    const where = `L1 ${d.day}: ${sc.icon} ${sc.name} (${sc.title})`;
+    sc.cast.forEach((id) => mark(id, where));
+    if (sc.prop) mark(sc.prop, where);
+    sc.choices.forEach((c) => markChoice(c, where));
+  })
+);
 Object.values(S.MONTH_ONE.scenes).forEach((sc) => {
   const where = `L2: ${sc.title}`;
   sc.cast.forEach((id) => mark(id, where));

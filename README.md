@@ -1,6 +1,6 @@
 # Startup Ladder (working title): playable prototype
 
-Mobile-first swipe-card prototype covering **Level 1 "Week One"** (4 scenes, 4 combos, 3 ways to lose, Friday Review with 6 endings),
+Mobile-first swipe-card prototype covering **Level 1 "Week One"** (4 days, 8 things to tap in town, 4 combos, 3 ways to lose, Friday Review with 6 endings),
 the six **Level 2 "Month One"** openings, and a **"To be continued: Level 3"** card. Plain HTML/CSS/JS, no build step.
 
 It's staged in **Pebblewick**, the 3D town from the `forest-mockup` prototype. The town fills the screen behind the cards,
@@ -25,7 +25,7 @@ The town's layout and models come from a `town/` folder next to `server.js` when
 repo). Without it, the server falls back to a sibling `../forest-mockup` folder, which is how the original workspace
 shares one town between both prototypes.
 
-**Controls:** swipe the card ← ↑ → (← Hustle, ↑ Wildcard, → Heart), or tap a choice button.
+**Controls:** tap one of the two things in town, then swipe the card ← ↑ → (← Safe, → Bold, ↑ Wild) or tap a choice button.
 On desktop: ← ↑ → or 1 2 3. Continue cards: tap or swipe the card, Enter, or Space.
 
 On a phone the town shows in the band between the meters and the text panel. On screens 900px or wider the cards dock
@@ -42,7 +42,7 @@ on the right and the town gets the rest of the screen.
 | `server.js` | Zero-dependency static server on port 5174. Lists `art/` for drop-in art and serves the town under `/town/` (read-only) |
 | `town/` | Bundled copy of the Pebblewick town: `js/town-layout.js` and `assets/` (KayKit nature models, CC0; the room model) |
 | `ART_ASSETS.md` | Brief for the concept artist: all 42 art slots, where each is used |
-| `tools/paths.js` | `node tools/paths.js` plays every Week One path and both sides of every Wildcard, and prints the odds of each ending and game over, fixed strategies, and each choice's value |
+| `tools/paths.js` | `node tools/paths.js` plays every Week One thing, option and roll, and prints the odds of each ending and game over, fixed strategies, and each option's value |
 | `tools/art-list.js` | `node tools/art-list.js` regenerates `ART_ASSETS.md` from `story.js` |
 
 ## Staging in the town
@@ -78,28 +78,33 @@ Start: 💰 $8,000, 🌟 Rep 4/10, 🔥 Chaos 3/10.
 
 ### The decision rules
 
-Every Week One card offers the same three stances, always in the same direction, so players can learn the logic:
+Each Week One day, the camera shows a place in Pebblewick and **two things float over the town** (the whiteboard and
+the coffee machine on Monday, the band and a mystery box on Tuesday, Gail and the fountain on Wednesday, Skyler and
+your laptop on Thursday). There's only time for one, so tapping which one to deal with is the first decision. Each
+thing then offers three options, and **every option rolls**: it goes well or it backfires.
 
-| Swipe | Stance | What it does |
-|---|---|---|
-| ← | **Hustle** | Money now, mess later. Cash up big, Chaos up, usually Rep down a little. |
-| ↑ | **Wildcard** | The absurd gamble. A needle spins: JACKPOT is the best result on the card, BUST the worst. |
-| → | **Heart** | Do the right thing and pay for it. Rep up, Chaos down, costs some Cash. |
+| Swipe | Option | Odds at start | Swing (value of good / bad result) |
+|---|---|---|---|
+| ← | **Safe** | 75% base | small: about +2 / −1 |
+| → | **Bold** | 55% base | bigger: about +4.5 / −3.5 |
+| ↑ | **Wild** | 35% base | huge: about +9 / −6 |
 
-**Wildcard odds** come from the meters, and the button shows them before you swipe:
-50% + 5% × (Rep − Chaos) + the card's own bias, kept between 15% and 85%. People forgive a beloved founder, and
-nothing works in a burning garage. So Hearts set up later gambles, and Hustles make them worse.
+**Odds** = the base above + 5% × (Rep − Chaos), kept between 10% and 90%. The button shows the odds and what a good
+roll gets you; the needle spin shows GOOD vs BAD. People forgive a beloved founder, and nothing works in a burning
+garage, so playing it safe early sets up Bold and Wild later.
 
-**Pricing.** Choices are priced at $2,000 ≈ 1 Rep ≈ 1 Chaos (as a cost). Hustles and Hearts are each worth about +1.5
-to +2. A Wildcard roughly breaks even at the starting odds, swings about +5 / −6, and pays off once you've
-earned better odds. `node tools/paths.js` prints every card's values so new cards can be priced the same way.
+**Pricing.** Every result is priced at $2,000 ≈ 1 Rep ≈ 1 Chaos (as a cost). `node tools/paths.js` prints every
+option's good/bad value and its average at the starting odds, so new things can be priced the same way.
+
+The things in town are DOM markers placed over the visible part of the town (`renderSpots` in `game.js`), so they
+work the same with or without the 3D town. Keys: 1 / 2 pick a thing, Esc goes back.
 
 **Rising stakes.** Cash and Rep swings are ×1 on Monday and Tuesday, ×1.25 on Wednesday and ×1.5 on Thursday
-(Chaos stays near ×1), so the last card of the week swings hardest. Wednesday and Thursday cards carry a red stakes badge.
+(Chaos stays near ×1), so the last day of the week swings hardest. Wednesday and Thursday carry a red stakes badge.
 
 **Ending compass.** During Week One a strip under the meters says which ending the meters point to right now
 ("Ending: 🫠 Meltdown"). While a choice is armed it also shows where that choice would take you, and for a
-Wildcard both results (★ jackpot, ✗ bust), including "Game over". It hides at the Friday Review so the verdict is still a reveal.
+rolling option both results (good or bad), including "Game over". It hides at the Friday Review so the verdict is still a reveal.
 
 ### Losing and winning
 
@@ -107,8 +112,8 @@ Wildcard both results (★ jackpot, ✗ bust), including "Game over". It hides a
   on the spot, after the card that caused it. Meters near a fail line pulse red.
 - **Win:** the **Unicorn** ending at the Friday Review.
 
-The Friday Review reads each meter as LOW / MID / HIGH (Cash: LOW under $12k, HIGH $24k+; Rep and Chaos: LOW ≤3,
-HIGH ≥7) and takes the first matching rule:
+The Friday Review reads each meter as LOW / MID / HIGH (Cash: LOW under $14k, HIGH $20k+; Rep and Chaos: LOW ≤3,
+HIGH ≥6) and takes the first matching rule:
 
 1. **Unicorn** (the win): Cash HIGH, Rep HIGH, Chaos MID
 2. **Accidental Viral**: Rep HIGH, Chaos HIGH
@@ -117,15 +122,16 @@ HIGH ≥7) and takes the first matching rule:
 5. **Fake It Till You Make It**: Cash HIGH without high Rep
 6. **Total Meltdown**: everything else (the survivable bottom; Month One opens in Mom's basement)
 
-`node tools/paths.js` plays every choice and both sides of every Wildcard. For a player picking at random:
-game over 29% (Combustion 14, Forgotten 9, Bankrupt 6), Unicorn 12%, and the middle endings 7–16% each
-(Wholesome 16, Fake It 15, Meltdown 10, Viral 10, Broke but Legit 7). Single-minded play doesn't work:
-always ← ends Forgotten, always ↑ usually combusts (15% go Viral), always → ends Broke but Legit.
+`node tools/paths.js` plays every thing, option and roll (18,954 outcomes). For a player picking at random:
+game over 31% (Combustion 18, Forgotten 7, Bankrupt 6), Unicorn 11%, and the middle endings 6–16% each
+(Wholesome 16, Meltdown 15, Viral 11, Fake It 11, Broke but Legit 6). Single-minded play doesn't win:
+always ← is safe but ends Broke but Legit 93% of the time, always → mostly ends Fake It or a game over, and
+always ↑ combusts 76% of the time.
 
 ### How a decision's weight is shown
 
-- **Before you commit:** each choice button names its stance and lists the meters it moves, with 1–3 arrows for size
-  (💰▲▲▲ = a big cash gain); a Wildcard shows its odds instead (🎲55%). While you swipe toward a choice, hover it or
+- **Before you commit:** each choice button names its option (Safe, Bold, Wild), its odds (🎲60%) and what a good roll
+  gets you, with 1–3 arrows for size (💰▲▲▲ = a big cash gain). The compass shows where each result would take you. While you swipe toward a choice, hover it or
   tab to it, those meters lift in the HUD with the same arrows.
 - **When it lands:** big tokens (e.g. **💰 −$6,000 ▼▼▼**) pop up over the town, then fly into their meters. Big ones get a
   BIG! sticker and shake the HUD.
@@ -135,7 +141,7 @@ always ← ends Forgotten, always ↑ usually combusts (15% go Viral), always �
 - **Colours:** Cash and Rep go green up / red down. Chaos isn't good or bad, so it heats up (orange) or cools down (blue).
 
 All of this lives in the "HUD + decision impact" section of `game.js`. In the browser console, `SL.impact({ cash: -6000, rep: 2 })`
-replays an impact. `?luck=win` or `?luck=lose` on the URL forces every Wildcard result, for testing.
+replays an impact. `?luck=win` or `?luck=lose` on the URL forces every roll, for testing.
 
 Notes:
 - Month One's openings still use their original choices; they don't follow the three stances yet. Game over applies there too.

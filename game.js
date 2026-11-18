@@ -10,6 +10,7 @@
 
   const $ = (sel, el = document) => el.querySelector(sel);
   const hud = $('#hud');
+  const spotsLayer = $('#spots');
   const stage = $('#stage');
   const controls = $('#controls');
 
@@ -18,7 +19,7 @@
   const ICON = { cash: '💰', rep: '🌟', chaos: '🔥' };
   const NAME = { cash: 'Cash', rep: 'Rep', chaos: 'Chaos' };
   const KIND_LABEL = { character: 'CHAR', reaction: 'REACT', prop: 'PROP', combo: 'COMBO ART', ending: 'ENDING ART' };
-  const STANCE = { left: 'Hustle', up: 'Wildcard', right: 'Heart' };
+  const STANCE = { left: 'Safe', up: 'Wild', right: 'Bold' };
   // How close a meter can get to its fail line before the HUD starts warning.
   const DANGER = { cash: (v) => v < 4000, rep: (v) => v <= 1, chaos: (v) => v >= 8 };
   const KEYMAP = { ArrowLeft: 'left', a: 'left', A: 'left', 1: 'left', ArrowUp: 'up', w: 'up', W: 'up', 2: 'up', ArrowRight: 'right', d: 'right', D: 'right', 3: 'right' };
@@ -245,7 +246,7 @@
   };
   function paintCompass(choice) {
     const el = $('#hud-compass');
-    const on = !state.ending && !state.over && current && ['intro', 'scene', 'gamble', 'outcome', 'combo'].includes(current.kind);
+    const on = !state.ending && !state.over && current && ['intro', 'world', 'scene', 'gamble', 'outcome', 'combo'].includes(current.kind);
     el.hidden = !on;
     if (!on) return;
     el.querySelector('.compass-now').innerHTML = resultName(S.project(state));
@@ -361,6 +362,7 @@
     if (spec.hud !== undefined) setHud(spec.hud);
     clearTags();
     renderControls(spec);
+    renderSpots(spec);
     if (!FAST) {
       el.classList.add('deal');
       el.addEventListener('animationend', (e) => e.target === el && el.classList.remove('deal'));
@@ -371,11 +373,36 @@
     if (spec.onShow) spec.onShow(el);
   }
 
+  // Things to tap, floating over the visible part of the town (works with or without the 3D town).
+  function renderSpots(spec) {
+    spotsLayer.innerHTML = '';
+    if (!spec.spots) return;
+    spec.spots.forEach(({ spot, go }, i) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = `spot spot-${i}`;
+      b.innerHTML = `<span class="spot-icon" aria-hidden="true">${spot.icon}</span><span class="spot-name">${spot.name}</span>`;
+      b.setAttribute('aria-label', `${spot.name}: ${spot.title}`);
+      b.addEventListener('click', () => !busy && go());
+      spotsLayer.appendChild(b);
+    });
+    placeSpots();
+  }
+  function placeSpots() {
+    const r = townRect(), n = spotsLayer.children.length;
+    [...spotsLayer.children].forEach((b, i) => {
+      b.style.left = r.x + (r.w * (i + 1)) / (n + 1) + 'px';
+      b.style.top = r.y + r.h * (i % 2 ? 0.58 : 0.42) + 'px';
+    });
+  }
+  window.addEventListener('resize', placeSpots);
+
   function renderControls(spec) {
     if (spec.choices) {
       controls.innerHTML =
-        '<p class="swipe-hint">Swipe or tap<span class="desk-only"> · keys 1 2 3</span></p>' +
+        `<p class="swipe-hint">Swipe or tap<span class="desk-only"> · keys 1 2 3</span>${spec.back ? ' · <button class="btn-back" type="button">↩ Back</button>' : ''}</p>` +
         spec.choices.map(choiceButton).join('');
+      if (spec.back) controls.querySelector('.btn-back').addEventListener('click', () => !busy && spec.back());
       controls.querySelectorAll('.choice').forEach((b) => {
         const c = spec.choices.find((x) => x.dir === b.dataset.dir);
         b.addEventListener('click', () => commit(b.dataset.dir));
@@ -399,7 +426,12 @@
     if (c.minigame) fx = '<i class="fx">🎨 mini-game</i>';
     else if (c.gamble) {
       const o = S.odds(state, c);
-      fx = `<i class="fx fx-odds ${o >= 60 ? 'odds-good' : o <= 40 ? 'odds-bad' : ''}" title="Wildcard: ${o}% chance of a jackpot, ${100 - o}% chance of a bust">🎲<b>${o}%</b></i>`;
+      const e = S.evalEffects(state, c.gamble.win.effects);
+      fx =
+        `<i class="fx fx-odds ${o >= 65 ? 'odds-good' : o <= 40 ? 'odds-bad' : ''}" title="${o}% chance it goes well">🎲<b>${o}%</b></i>` +
+        KEYS.filter((k) => e[k] && (k === 'chaos' ? e[k] < 0 : e[k] > 0))
+          .map((k) => `<i class="fx fx-win ${impTone(k, e[k])} t${tier(k, e[k])}" title="If it goes well: ${NAME[k]} ${e[k] > 0 ? 'up' : 'down'}">${ICON[k]}<b>${arrows(e[k], tier(k, e[k]))}</b></i>`)
+          .join('');
     } else {
       const e = S.evalEffects(state, c.effects);
       fx = KEYS.filter((k) => e[k])
@@ -521,6 +553,7 @@
   document.addEventListener('keydown', (e) => {
     if (e.repeat || e.ctrlKey || e.metaKey || e.altKey || !current) return;
     if (current.onKey && current.onKey(e)) return e.preventDefault();
+    if (current.back && (e.key === 'Escape' || e.key === 'Backspace') && !busy) return e.preventDefault(), current.back();
     if (current.choices) {
       const dir = KEYMAP[e.key];
       if (dir) {
@@ -566,7 +599,7 @@
     state = S.newState();
     queue = [
       () => levelIntro(S.WEEK_ONE),
-      ...S.WEEK_ONE.scenes.map((sc) => () => sceneCard(sc, S.WEEK_ONE)),
+      ...S.WEEK_ONE.days.map((d) => () => townView(d)),
       reviewCard,
       endingCard,
       () => levelIntro(S.MONTH_ONE),
@@ -591,6 +624,48 @@
           ? `<ul class="rules">${level.rules.map(([icon, name, line]) => `<li><span class="rule-icon">${icon}</span><b>${name}</b><span>${line}</span></li>`).join('')}</ul>`
           : '') +
         `</div>`,
+    });
+  }
+
+  // A day in Week One: the camera shows a place; two things float over the town. Tap one to deal with it.
+  function townView(day) {
+    show({
+      kind: 'world',
+      id: day.id,
+      noSwipe: true,
+      hud: levelLabel(S.WEEK_ONE, day.day),
+      stage: day.stage,
+      html:
+        `<div class="card-art"></div>` +
+        `<div class="card-body world-panel"><p class="eyebrow">${day.day} · ${day.place}` +
+        `${day.stakes ? ` <span class="stakes">🔺 ${day.stakes}</span>` : ''}</p>` +
+        `<h2 class="card-title">Time for one thing.</h2><p class="card-text">Tap something in town.</p></div>`,
+      controlsHtml: '<p class="swipe-hint">Tap one<span class="desk-only"> · keys 1 2</span></p>',
+      spots: day.spots.map((spot) => ({ spot, go: () => momentCard(day, spot) })),
+      onKey: (e) => {
+        const i = { 1: 0, ArrowLeft: 0, 2: 1, ArrowRight: 1 }[e.key];
+        if (i == null || !day.spots[i]) return false;
+        momentCard(day, day.spots[i]);
+        return true;
+      },
+    });
+  }
+
+  // The thing you tapped: what's going on, and three options that all roll.
+  function momentCard(day, spot) {
+    show({
+      kind: 'scene',
+      id: spot.id,
+      hud: levelLabel(S.WEEK_ONE, day.day),
+      stage: spot.stage || day.stage,
+      html:
+        `<div class="card-art cast-${spot.cast.length}">${spot.cast.map((id) => slot(id, 'slot-cast')).join('')}` +
+        `${spot.prop ? slot(spot.prop, 'slot-prop') : ''}</div>` +
+        `<div class="card-body"><p class="eyebrow">${spot.icon} ${spot.name}${day.stakes ? ` <span class="stakes">🔺 ${day.stakes}</span>` : ''}</p>` +
+        `<h2 class="card-title">${spot.title}</h2><p class="card-text">${S.fill(spot.text, state)}</p></div>`,
+      choices: spot.choices,
+      back: () => townView(day),
+      onChoose: (choice) => chooseWeek(spot, choice),
     });
   }
 
@@ -650,7 +725,7 @@
   function outcomeCard(scene, choice, deltas, outcome, won) {
     const gambled = choice.gamble && won !== undefined;
     const o = outcome || (gambled ? S.branch(choice, won).outcome : choice.outcome);
-    const badge = gambled ? `<p class="gamble-badge ${won ? 'is-win' : 'is-bust'}">${won ? '🎰 JACKPOT!' : '💀 BUST!'}</p>` : '';
+    const badge = gambled ? `<p class="gamble-badge ${won ? 'is-win' : 'is-bust'}">${won ? '🎲 It worked!' : '💥 It backfired!'}</p>` : '';
     show({
       kind: 'outcome',
       id: `${scene.id}:${choice.dir}`,
@@ -684,7 +759,7 @@
 
   function reviewCard() {
     state.ending = S.pickEnding(state);
-    const days = S.WEEK_ONE.scenes.map((sc, i) => `<li><b>${sc.day.slice(0, 3)}</b>${state.log[i]}</li>`).join('');
+    const days = S.WEEK_ONE.days.map((d, i) => `<li><b>${d.day.slice(0, 3)}</b>${state.log[i]}</li>`).join('');
     const combos = state.combos
       .map((id) => S.COMBOS.find((c) => c.id === id))
       .map((c) => `<li class="is-combo"><b>Combo</b>${c.title}</li>`)
@@ -782,7 +857,7 @@
     const o = S.odds(state, choice);
     const won = LUCK ? LUCK === 'win' : Math.random() * 100 < o;
     const target = won ? o * (0.15 + Math.random() * 0.7) : o + (100 - o) * (0.15 + Math.random() * 0.7);
-    const DUR = 2200;
+    const DUR = 1500;
     let raf = 0;
     let done = false;
 
@@ -794,14 +869,14 @@
       if (needle) needle.style.left = target + '%';
       const res = card && card.querySelector('.gamble-result');
       if (res) {
-        res.textContent = won ? 'JACKPOT!' : 'BUST!';
+        res.textContent = won ? 'NICE!' : 'UH OH!';
         res.className = 'gamble-result ' + (won ? 'is-win' : 'is-bust');
       }
       if (FAST) return resolve(won);
       setTimeout(() => {
         busy = true;
         flyOut('up').then(() => resolve(won));
-      }, 1000);
+      }, 700);
     }
 
     show({
@@ -810,10 +885,10 @@
       noSwipe: true,
       tone: 'gamble',
       html:
-        `<div class="card-body center"><p class="eyebrow">Wildcard</p><h2 class="card-title">${choice.label}</h2>` +
+        `<div class="card-body center"><p class="eyebrow">${STANCE[choice.dir]} · rolling</p><h2 class="card-title">${choice.label}</h2>` +
         `<p class="card-text">${choice.hint}</p>` +
-        `<div class="gamble"><div class="gamble-bar"><span class="zone-win" style="width:${o}%">JACKPOT ${o}%</span>` +
-        `<span class="zone-bust" style="width:${100 - o}%">BUST ${100 - o}%</span><span class="needle"></span></div>` +
+        `<div class="gamble"><div class="gamble-bar"><span class="zone-win" style="width:${o}%">${o >= 20 ? `GOOD ${o}%` : ''}</span>` +
+        `<span class="zone-bust" style="width:${100 - o}%">${100 - o >= 20 ? `BAD ${100 - o}%` : ''}</span><span class="needle"></span></div>` +
         `<p class="gamble-result" aria-live="polite">🎲 Rolling…</p>` +
         `<p class="gamble-why">Rep helps. Chaos hurts.</p></div></div>`,
       controlsHtml: '<p class="swipe-hint">Tap to skip</p>',
