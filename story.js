@@ -14,7 +14,7 @@
 
   // What counts as LOW / HIGH when the Friday Review reads your meters.
   const LEVELS = {
-    cash: { low: 12000, high: 20000 }, // LOW is below $12,000 (barely any profit), HIGH is $20,000 or more
+    cash: { low: 12000, high: 24000 }, // LOW is below $12,000 (barely any profit), HIGH is $24,000 or more
     rep: { low: 3, high: 7 }, //         LOW is 3 or less,     HIGH is 7 or more (0 = game over)
     chaos: { low: 3, high: 7 }, //     LOW is 3 or less,     HIGH is 7 or more (10 = game over)
   };
@@ -110,6 +110,10 @@
   //                                     kept between 15% and 85%. People forgive the
   //                                     beloved and nothing works in a burning garage.
   //  → HEART    Do the right thing, and pay for it. Rep up; Chaos down; costs some Cash.
+  //
+  // RISING STAKES: Cash and Rep swings are ×1 on Monday and Tuesday, ×1.25 on Wednesday and
+  // ×1.5 on Thursday, so the last card swings hardest. Chaos stays near ×1 (scaling it too
+  // made combustion swallow the week). The numbers are written in already.
   //
   // Rough exchange rate used to price choices: $2,000 ≈ 1 Rep ≈ 1 Chaos (as a cost).
   // Hustle and Heart are each worth about +1 to +2 of that; a Wildcard is worth more when
@@ -269,6 +273,7 @@
       },
       {
         id: 'customer',
+        stakes: 'Stakes ×1.25',
         day: 'Wednesday',
         title: 'The First Customer',
         stage: { shot: 'square', day: 3, hour: 13 },
@@ -283,12 +288,12 @@
             label: 'Promise it. Build it overnight.',
             short: 'Promised',
             hint: 'Cash now. Your left eye pays later.',
-            effects: { cash: 9000, rep: -1, chaos: 2 },
+            effects: { cash: 11000, rep: -1, chaos: 2 },
             flags: { customer: 'promise' },
             log: 'Promised the feature and built it overnight',
             outcome: {
               art: 'react_founder_exhausted',
-              text: 'You code until sunrise on energy drinks and spite. The Leg Day Lie Detector mostly works. Gail pays $9,000. She also says you look "like a raccoon that does taxes". Your left eye is now blinking in Morse code. It says "help".',
+              text: 'You code until sunrise on energy drinks and spite. The Leg Day Lie Detector mostly works. Gail pays $11,000. She also says you look "like a raccoon that does taxes". Your left eye is now blinking in Morse code. It says "help".',
             },
           },
           {
@@ -299,21 +304,21 @@
             gamble: {
               bias: 0,
               win: {
-                effects: { cash: 14000, rep: 1, chaos: 2 },
+                effects: { cash: 18000, rep: 1, chaos: 2 },
                 flags: { customer: 'fake' },
                 log: 'Faked a demo (nailed it)',
                 outcome: {
                   art: 'react_founder_smug',
-                  text: 'You point your phone at Gail\'s trainer and say "beep... lie detected." He confesses on the spot. Gail signs for $14,000. You have invented nothing, and also invoice #001.',
+                  text: 'You point your phone at Gail\'s trainer and say "beep... lie detected." He confesses on the spot. Gail signs for $18,000. You have invented nothing, and also invoice #001.',
                 },
               },
               lose: {
-                effects: { cash: -3000, rep: -2, chaos: 3 },
+                effects: { cash: -4000, rep: -3, chaos: 3 },
                 flags: { customer: 'caught' },
                 log: 'Faked a demo (got caught)',
                 outcome: {
                   art: 'react_customer_stare',
-                  text: '"Beep... lie detected." The trainer did do legs. He shows everyone. He shows them twice. Gail blows the whistle, slowly, for eleven full seconds. Every gym in the county now has your photo by the door, and Gail wants her $3,000 deposit back.',
+                  text: '"Beep... lie detected." The trainer did do legs. He shows everyone. He shows them twice. Gail blows the whistle, slowly, for eleven full seconds. Every gym in the county now has your photo by the door, and Gail wants her $4,000 deposit back.',
                 },
               },
             },
@@ -323,18 +328,19 @@
             label: 'Be honest',
             short: 'Honest',
             hint: 'Lose the sale. Gain a reputation.',
-            effects: { cash: -2000, rep: 2, chaos: -1 },
+            effects: { cash: -3000, rep: 3, chaos: -1 },
             flags: { customer: 'honest' },
             log: 'Told Gail the truth',
             outcome: {
               art: 'react_customer_stare',
-              text: 'Gail stares at you for eleven full seconds. "Nobody\'s ever told me no." No sale, and somehow you paid for her $2,000 smoothie order (forty gyms\' worth). But she tells all 40 gyms you\'re "the honest one."',
+              text: 'Gail stares at you for eleven full seconds. "Nobody\'s ever told me no." No sale, and somehow you paid for her $3,000 smoothie order (forty gyms\' worth). But she tells all 40 gyms you\'re "the honest one."',
             },
           },
         ],
       },
       {
         id: 'intern',
+        stakes: 'Stakes ×1.5 · last call',
         day: 'Thursday',
         title: 'The Intern',
         stage: { shot: 'home_room', day: 4, hour: 16 },
@@ -349,12 +355,12 @@
             label: 'Rent Skyler out to Gail\'s gyms',
             short: 'Rented out',
             hint: 'An intern is a resource. Allegedly.',
-            effects: { cash: 7000, rep: -1, chaos: 1 },
+            effects: { cash: 11000, rep: -2, chaos: 1 },
             flags: { intern: 'rented' },
             log: 'Rented the intern out as a personal trainer',
             outcome: {
               art: 'react_founder_smug',
-              text: 'Skyler is now a personal trainer. Skyler has never touched a dumbbell. Their first client is the trainer from the leg-day thing. Gail pays $7,000 and calls it "an experience".',
+              text: 'Skyler is now a personal trainer. Skyler has never touched a dumbbell. Their first client is the trainer from the leg-day thing. Gail pays $11,000 and calls it "an experience".',
             },
           },
           {
@@ -365,21 +371,21 @@
             gamble: {
               bias: 0,
               win: {
-                effects: { cash: 6000, rep: 3, chaos: 1 },
+                effects: { cash: 9000, rep: 5, chaos: 1 },
                 flags: { intern: 'access' },
                 log: 'Gave the intern full access (genius)',
                 outcome: {
                   art: 'react_intern_glitter',
-                  text: 'By lunch Skyler has fixed 30 bugs, made the logo 40% friendlier, and sold the old logo to their uncle for $6,000. They\'d like a title. They choose "Wizard".',
+                  text: 'By lunch Skyler has fixed 30 bugs, made the logo 40% friendlier, and sold the old logo to their uncle for $9,000. They\'d like a title. They choose "Wizard".',
                 },
               },
               lose: {
-                effects: { cash: -3000, chaos: 4 },
+                effects: { cash: -5000, chaos: 4 },
                 flags: { intern: 'deleted' },
                 log: 'Gave the intern full access (database gone)',
                 outcome: {
                   art: 'react_intern_proud',
-                  text: 'By 3pm Skyler has "cleaned up a huge messy file called production." The database is gone. The backup is gone. Skyler is so proud of all the free space. Restoring it costs $3,000.',
+                  text: 'By 3pm Skyler has "cleaned up a huge messy file called production." The database is gone. The backup is gone. Skyler is so proud of all the free space. Restoring it costs $5,000.',
                 },
               },
             },
@@ -389,12 +395,12 @@
             label: 'Coffee duty. And actually pay them.',
             short: 'Coffee duty',
             hint: 'Safe and decent. You might miss a hidden genius.',
-            effects: { cash: -1000, rep: 1, chaos: -1 },
+            effects: { cash: -2000, rep: 2, chaos: -1 },
             flags: { intern: 'coffee' },
             log: 'Put the intern on (paid) coffee duty',
             outcome: {
               art: 'react_intern_coffee',
-              text: 'Skyler makes a flawless oat-milk flat white and thanks you for the $1,000 like it\'s a kidney. Unrelated: their weekend side project just hit #1 on every coding site on Earth. Great coffee, though.',
+              text: 'Skyler makes a flawless oat-milk flat white and thanks you for the $2,000 like it\'s a kidney. Unrelated: their weekend side project just hit #1 on every coding site on Earth. Great coffee, though.',
             },
           },
         ],
@@ -948,6 +954,24 @@
     return applyEffects(state, b.effects);
   }
 
+  // Ending compass: where the meters point right now, or where a choice would take you.
+  // Returns { fail } if a fail line would be crossed, else { ending } (the Review's verdict).
+  function project(state, choice, won) {
+    const s = JSON.parse(JSON.stringify(state));
+    if (choice) {
+      choose(s, choice, won);
+      let f = failCheck(s);
+      if (f) return { fail: f };
+      for (const c of newCombos(s)) {
+        applyEffects(s, c.effects);
+        f = failCheck(s);
+        if (f) return { fail: f };
+      }
+    }
+    const f = failCheck(s);
+    return f ? { fail: f } : { ending: pickEnding(s).id };
+  }
+
   // Returns the game-over id once a fail line is crossed, else null.
   function failCheck(state) {
     return FAIL_ORDER.find((id) => FAILS[id].test(state)) || null;
@@ -988,7 +1012,7 @@
 
   const STORY = {
     START, METER_MAX, LEVELS, ODDS, ART, IDEA, TITLE_STAGE, WEEK_ONE, COMBOS, FAILS, FAIL_ORDER, ENDINGS, ENDING_ORDER, MONTH_ONE, LOGO_HAGGLE, TBC,
-    newState, evalEffects, applyEffects, odds, branch, choose, failCheck, newCombos, levels, pickEnding, fmtCash, fill,
+    newState, evalEffects, applyEffects, odds, branch, choose, failCheck, project, newCombos, levels, pickEnding, fmtCash, fill,
   };
 
   root.STORY = STORY;

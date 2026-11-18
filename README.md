@@ -94,13 +94,20 @@ nothing works in a burning garage. So Hearts set up later gambles, and Hustles m
 to +2. A Wildcard roughly breaks even at the starting odds, swings about +5 / −6, and pays off once you've
 earned better odds. `node tools/paths.js` prints every card's values so new cards can be priced the same way.
 
+**Rising stakes.** Cash and Rep swings are ×1 on Monday and Tuesday, ×1.25 on Wednesday and ×1.5 on Thursday
+(Chaos stays near ×1), so the last card of the week swings hardest. Wednesday and Thursday cards carry a red stakes badge.
+
+**Ending compass.** During Week One a strip under the meters says which ending the meters point to right now
+("Heading for: 🫠 Total Meltdown"). While a choice is armed it also shows where that choice would take you, and for a
+Wildcard both results (★ jackpot, ✗ bust), including "Game over". It hides at the Friday Review so the verdict is still a reveal.
+
 ### Losing and winning
 
 - **Game over:** Cash $0 (**Bankrupt**), Rep 0 (**Forgotten**) or Chaos 10 (**Spontaneous Combustion**) ends the run
   on the spot, after the card that caused it. Meters near a fail line pulse red.
 - **Win:** the **Unicorn** ending at the Friday Review.
 
-The Friday Review reads each meter as LOW / MID / HIGH (Cash: LOW under $12k, HIGH $20k+; Rep and Chaos: LOW ≤3,
+The Friday Review reads each meter as LOW / MID / HIGH (Cash: LOW under $12k, HIGH $24k+; Rep and Chaos: LOW ≤3,
 HIGH ≥7) and takes the first matching rule:
 
 1. **Unicorn** (the win): Cash HIGH, Rep HIGH, Chaos MID
@@ -111,8 +118,8 @@ HIGH ≥7) and takes the first matching rule:
 6. **Total Meltdown**: everything else (the survivable bottom; Month One opens in Mom's basement)
 
 `node tools/paths.js` plays every choice and both sides of every Wildcard. For a player picking at random:
-game over 26% (Combustion 14, Forgotten 8, Bankrupt 4), Unicorn 12%, and the middle endings 7–19% each
-(Fake It 19, Wholesome 15, Meltdown 11, Viral 10, Broke but Legit 8). Single-minded play doesn't work:
+game over 29% (Combustion 14, Forgotten 9, Bankrupt 6), Unicorn 12%, and the middle endings 7–16% each
+(Wholesome 16, Fake It 15, Meltdown 10, Viral 10, Broke but Legit 7). Single-minded play doesn't work:
 always ← ends Forgotten, always ↑ usually combusts (15% go Viral), always → ends Broke but Legit.
 
 ### How a decision's weight is shown

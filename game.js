@@ -221,6 +221,7 @@
 
   // While a choice is armed (swiping, hover, keyboard focus) the meters it would move show ▲/▼.
   function previewMeters(choice) {
+    paintCompass(choice);
     const e = choice && !choice.minigame && !choice.gamble ? S.evalEffects(state, choice.effects) : {};
     for (const k of KEYS) {
       const m = meterEl(k), pv = m.querySelector('.meter-pv'), d = e[k];
@@ -234,6 +235,28 @@
         m.classList.remove('is-previewed');
       }
     }
+  }
+
+  // Ending compass (Week One only): where the meters point now, and where the armed choice would take you.
+  const resultName = (r) => {
+    if (r.fail) return `<span class="cp-fail">${S.ART[S.FAILS[r.fail].art].emoji} Game over</span>`;
+    const e = S.ENDINGS[r.ending];
+    return `<span class="cp-${r.ending}">${S.ART[e.art].emoji} ${e.title}</span>`;
+  };
+  function paintCompass(choice) {
+    const el = $('#hud-compass');
+    const on = !state.ending && !state.over && current && ['intro', 'scene', 'gamble', 'outcome', 'combo'].includes(current.kind);
+    el.hidden = !on;
+    if (!on) return;
+    el.querySelector('.compass-now').innerHTML = resultName(S.project(state));
+    const next = el.querySelector('.compass-next');
+    if (!choice || choice.minigame || current.kind !== 'scene') {
+      next.innerHTML = '';
+      return;
+    }
+    next.innerHTML = choice.gamble
+      ? ` → <i>★</i> ${resultName(S.project(state, choice, true))} <i>✗</i> ${resultName(S.project(state, choice, false))}`
+      : ` → ${resultName(S.project(state, choice))}`;
   }
 
   function deltaChips(deltas) {
@@ -578,7 +601,7 @@
       html:
         `<div class="card-art cast-${scene.cast.length}">${scene.cast.map((id) => slot(id, 'slot-cast')).join('')}` +
         `${scene.prop ? slot(scene.prop, 'slot-prop') : ''}</div>` +
-        `<div class="card-body"><p class="eyebrow">${day || level.title}</p><h2 class="card-title">${scene.title}</h2>` +
+        `<div class="card-body"><p class="eyebrow">${day || level.title}${scene.stakes ? ` <span class="stakes">🔺 ${scene.stakes}</span>` : ''}</p><h2 class="card-title">${scene.title}</h2>` +
         `${bonusHtml}<p class="card-text">${S.fill(scene.text, state)}</p></div>`,
       choices: scene.choices,
       onShow: () => scene.bonus && showImpact(S.applyEffects(state, scene.bonus.effects)),
