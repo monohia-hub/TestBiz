@@ -9,14 +9,14 @@
   // ---------------------------------------------------------------------------
   // Meters
   // ---------------------------------------------------------------------------
-  const START = { cash: 10000, rep: 2, chaos: 2 };
+  const START = { cash: 8000, rep: 4, chaos: 3 };
   const METER_MAX = 10; // Rep and Chaos run 0–10. Cash is dollars, never below $0.
 
   // What counts as LOW / HIGH when the Friday Review reads your meters.
   const LEVELS = {
-    cash: { low: 8000, high: 16000 }, // LOW is below $8,000, HIGH is $16,000 or more
-    rep: { low: 3, high: 6 }, //         LOW is 3 or less,     HIGH is 6 or more
-    chaos: { low: 3, high: 6 },
+    cash: { low: 12000, high: 20000 }, // LOW is below $12,000 (barely any profit), HIGH is $20,000 or more
+    rep: { low: 3, high: 7 }, //         LOW is 3 or less,     HIGH is 7 or more (0 = game over)
+    chaos: { low: 3, high: 7 }, //     LOW is 3 or less,     HIGH is 7 or more (10 = game over)
   };
 
   // ---------------------------------------------------------------------------
@@ -76,6 +76,13 @@
     end_viral: { kind: 'ending', emoji: '🚀', desc: 'Ending: Accidental Viral. Founder surfing a wave of phone notifications.' },
     end_broke: { kind: 'ending', emoji: '🏛️', desc: 'Ending: Broke but Legit. Founder in a suit made of receipts, $43 in the jar.' },
     end_meltdown: { kind: 'ending', emoji: '🫠', desc: 'Ending: Total Meltdown. Garage smoking, intern leaving with the plant, Mom waving from the basement door.' },
+    end_unicorn: { kind: 'ending', emoji: '🦄', desc: 'Ending: Unicorn (the win). Founder in a gold hoodie riding an inflatable unicorn through the town square.' },
+
+    // Game over cards
+    fail_combustion: { kind: 'ending', emoji: '💥', desc: 'Game over: Spontaneous Combustion. Garage crater, a goat on the roof, the fire chief giving a thumbs-up.' },
+    fail_bankrupt: { kind: 'ending', emoji: '💸', desc: 'Game over: Bankrupt. Founder at a vending machine holding a declined card; Mom in the background with the company on her fridge.' },
+    fail_forgotten: { kind: 'ending', emoji: '👻', desc: 'Game over: Forgotten. Founder fading to transparent while the town walks past.' },
+    prop_magazine: { kind: 'prop', emoji: '📰', desc: 'Magazine cover mock-up: "30 UNDER 30 MINUTES", a blank space where your face goes.' },
   };
 
   // ---------------------------------------------------------------------------
@@ -93,11 +100,34 @@
   // ---------------------------------------------------------------------------
   const TITLE_STAGE = { shot: 'overview', day: 0, hour: 18.5 };
 
+  // ---------------------------------------------------------------------------
+  // DECISION RULES. Every Week One card follows these, so players can learn them.
+  //
+  //  ← HUSTLE   Money now, mess later.  Cash up big; Chaos up; often a little Rep down.
+  //  ↑ WILDCARD The absurd gamble.      Shows its odds. JACKPOT is the best result on the
+  //                                     card; BUST is the worst. Odds come from the meters:
+  //                                     50% + 5% × (Rep − Chaos) + the card's own bias,
+  //                                     kept between 15% and 85%. People forgive the
+  //                                     beloved and nothing works in a burning garage.
+  //  → HEART    Do the right thing, and pay for it. Rep up; Chaos down; costs some Cash.
+  //
+  // Rough exchange rate used to price choices: $2,000 ≈ 1 Rep ≈ 1 Chaos (as a cost).
+  // Hustle and Heart are each worth about +1 to +2 of that; a Wildcard is worth more when
+  // its odds are good and less when they're bad, so earlier choices set up later gambles.
+  //
+  // FAIL: Cash $0, Rep 0 or Chaos 10 ends the run on the spot (see FAILS).
+  // WIN:  the Unicorn ending at the Friday Review (Cash HIGH, Rep HIGH, Chaos MID).
+  // Run `node tools/paths.js` after changing numbers: it plays every path and gamble.
+  // ---------------------------------------------------------------------------
+  const ODDS = { base: 50, perPoint: 5, min: 15, max: 85 };
+
   const WEEK_ONE = {
     id: 'week1',
     number: 1,
     title: 'Week One',
-    intro: 'Five days. Four big decisions. One garage. On Friday, the review decides what kind of company you are.',
+    intro:
+      'Four days. Four decisions. ← hustles for money, → follows your heart, ↑ gambles. ' +
+      'Hit $0, Rep 0 or Chaos 10 and it\'s over. Survive to Friday and the review decides what kind of company you are.',
     stage: { shot: 'home_front', day: 1, hour: 8 },
     review: { shot: 'home_room', day: 5, hour: 18.5 },
     scenes: [
@@ -110,34 +140,48 @@
         prop: 'prop_name_whiteboard',
         text:
           'Your co-founder Devin wants <b>"Synergyze"</b>. "With a Y. And a Z. Vowels are for legacy brands." ' +
-          'Mom wants <b>"Bob\'s Apps"</b>. Nobody here is called Bob. "It sounds like a man who\'d return your lawnmower."',
+          'Mom wants <b>"Bob\'s Apps"</b>. Nobody here is called Bob. "It sounds like a man who\'d return your lawnmower." ' +
+          'Or you could let a random word generator decide. It\'s already loaded.',
         choices: [
           {
             dir: 'left',
             label: 'Go trendy: Synergyze',
             short: 'Synergyze',
             hint: 'Investors love it. Customers can\'t pronounce it.',
-            effects: { cash: 2000, chaos: 1 },
+            effects: { cash: 9000, rep: -2, chaos: 1 },
             flags: { name: 'synergyze' },
             company: 'Synergyze',
             log: 'Named it Synergyze',
             outcome: {
               art: 'react_cofounder_thrilled',
-              text: 'A man in a fleece vest wires you $2,000 "for the vibe". Your first customer email begins: "Dear Sinner-Geez."',
+              text: 'A man in a fleece vest wires you $9,000 "for the vibe". He has not asked what the app does. Your first customer email begins: "Dear Sinner-Geez."',
             },
           },
           {
             dir: 'up',
             label: 'Random word generator',
             short: 'BLORP',
-            hint: 'It lands on "Blorp". Goes viral later, for better or worse.',
-            effects: { rep: 1, chaos: 2 },
+            hint: 'It lands on "Blorp". Either a legend or a lawsuit.',
             flags: { name: 'blorp' },
             company: 'Blorp',
-            log: 'Named it Blorp',
-            outcome: {
-              art: 'react_founder_shrug',
-              text: 'BLORP. It\'s on the mugs. It\'s on the hoodie. Your accountant said it out loud and had to sit down. No take-backs.',
+            gamble: {
+              bias: 0,
+              win: {
+                effects: { cash: 6000, rep: 4, chaos: 2 },
+                log: 'Named it Blorp (it stuck)',
+                outcome: {
+                  art: 'react_founder_shrug',
+                  text: 'BLORP. A focus group of nine-year-olds chants it for an hour. Your accountant said it out loud and had to sit down. The mugs sell out: $6,000. No take-backs.',
+                },
+              },
+              lose: {
+                effects: { cash: -4000, rep: -1, chaos: 3 },
+                log: 'Named it Blorp (got sued)',
+                outcome: {
+                  art: 'react_founder_panic',
+                  text: 'Blorp is already a dog-grooming chain in Ohio. They have a lawyer named Chad. Chad wants $4,000 and an apology written in crayon, "to match your brand".',
+                },
+              },
             },
           },
           {
@@ -145,13 +189,13 @@
             label: 'Go with Mom: Bob\'s Apps',
             short: 'Bob\'s Apps',
             hint: 'Charming. Nobody takes you seriously.',
-            effects: { rep: 2, chaos: -1 },
+            effects: { cash: -2000, rep: 2, chaos: -1 },
             flags: { name: 'bob' },
             company: 'Bob\'s Apps',
             log: 'Named it Bob\'s Apps',
             outcome: {
               art: 'react_mom_beaming',
-              text: 'Mom prints 500 business cards with a clip-art thumbs-up. The bank teller pats your hand. A venture capitalist laughs until he has to lie down.',
+              text: 'Mom orders 500 business cards with a clip-art thumbs-up. Mom insisted on gold foil: $2,000. The bank teller pats your hand. A venture capitalist laughs until he has to lie down.',
             },
           },
         ],
@@ -169,42 +213,56 @@
         choices: [
           {
             dir: 'left',
-            label: 'Kick them out',
-            short: 'Kicked out',
-            hint: 'Quiet workspace. Family drama.',
-            effects: { rep: -2, chaos: -1 },
-            flags: { garage: 'kick' },
-            log: 'Kicked the band out',
+            label: 'Sublet it as a co-working space',
+            short: 'Sublet',
+            hint: 'Charge the band rent. And six strangers. And a goat.',
+            effects: { cash: 8000, rep: -1, chaos: 1 },
+            flags: { garage: 'sublet' },
+            log: 'Turned the garage into a co-working space',
             outcome: {
-              art: 'react_founder_sheepish',
-              text: 'Silence. Beautiful, productive silence. Also 23 texts from Aunt Linda. Thanksgiving has been "rescheduled". You are not invited to the new date.',
+              art: 'react_founder_smug',
+              text: 'Seven members, one band, one bathroom. $8,000 in "membership fees". Somebody keeps a goat in there. The goat is in the lease now. Aunt Linda has rescheduled Thanksgiving.',
             },
           },
           {
             dir: 'up',
-            label: 'Share the garage',
-            short: 'Shared',
-            hint: 'The band becomes your unofficial marketing team.',
-            effects: { rep: 2, chaos: 2 },
-            flags: { garage: 'share' },
-            log: 'Shared the garage with the band',
-            outcome: {
-              art: 'react_band_rocking',
-              text: 'Ricky paints your logo on the bass drum. Stand-ups now happen between guitar solos. Productivity: down. Vibes: illegal.',
+            label: 'Sign the band as your marketing team',
+            short: 'Band signed',
+            hint: 'Free jingles. Or a noise complaint.',
+            flags: {},
+            gamble: {
+              bias: 0,
+              win: {
+                effects: { cash: 4000, rep: 3, chaos: 1 },
+                flags: { garage: 'share' },
+                log: 'Signed the band (they slapped)',
+                outcome: {
+                  art: 'react_band_rocking',
+                  text: 'Ricky paints your logo on the bass drum. The bowling alley books them and pays you $4,000 for "the vibe". Stand-ups now happen between guitar solos. Vibes: illegal.',
+                },
+              },
+              lose: {
+                effects: { cash: -3000, rep: -1, chaos: 2 },
+                flags: { garage: 'noise' },
+                log: 'Signed the band (noise complaint)',
+                outcome: {
+                  art: 'react_founder_panic',
+                  text: 'A noise complaint. Then a second noise complaint. Then the police, who stay for the whole sandwich song, cry a little, and still fine you $3,000.',
+                },
+              },
             },
           },
           {
             dir: 'right',
-            label: 'Rent an office',
-            short: 'Office',
-            hint: 'Burns half your cash. But you look legit.',
-            effects: { cash: (s) => -Math.round(s.cash / 2), rep: 2 },
-            flags: { garage: 'office' },
-            log: 'Rented an office',
+            label: 'Let them rock. Work from Mom\'s sunroom.',
+            short: 'Sunroom',
+            hint: 'Family peace. Mom\'s Wi-Fi password is a paragraph.',
+            effects: { cash: -2000, rep: 2, chaos: -1 },
+            flags: { garage: 'mom' },
+            log: 'Moved to Mom\'s sunroom',
             outcome: {
-              art: 'react_founder_proud',
-              stage: { shot: 'office' },
-              text: 'Half your money later: a desk, a plant, and a door with your name on it. Spelled wrong. You have never felt more legitimate.',
+              art: 'react_mom_beaming',
+              text: 'Mom charges rent in the form of "helping with the computer" and $2,000 for "utilities", which is a lasagna. The band dedicates the sandwich song to you. All 14 minutes.',
             },
           },
         ],
@@ -224,39 +282,53 @@
             dir: 'left',
             label: 'Promise it. Build it overnight.',
             short: 'Promised',
-            hint: 'Cash now. Burnout later.',
-            effects: { cash: 6000, rep: 1, chaos: 2 },
+            hint: 'Cash now. Your left eye pays later.',
+            effects: { cash: 9000, rep: -1, chaos: 2 },
             flags: { customer: 'promise' },
             log: 'Promised the feature and built it overnight',
             outcome: {
               art: 'react_founder_exhausted',
-              text: 'You code until sunrise on energy drinks and spite. The Leg Day Lie Detector mostly works. Gail pays up. Your left eye is now blinking in Morse code.',
+              text: 'You code until sunrise on energy drinks and spite. The Leg Day Lie Detector mostly works. Gail pays $9,000. She also says you look "like a raccoon that does taxes". Your left eye is now blinking in Morse code. It says "help".',
             },
           },
           {
             dir: 'up',
             label: 'Fake a demo',
             short: 'Faked it',
-            hint: 'Works until it doesn\'t.',
-            effects: { cash: 8000, chaos: 3 },
-            flags: { customer: 'fake' },
-            log: 'Faked a demo',
-            outcome: {
-              art: 'react_founder_smug',
-              text: 'You point your phone at Gail\'s personal trainer and say "beep... lie detected." He confesses on the spot. Gail signs immediately. You have invented nothing, and also invoice #001.',
+            hint: 'Biggest payday of the week. If nobody checks.',
+            gamble: {
+              bias: 0,
+              win: {
+                effects: { cash: 14000, rep: 1, chaos: 2 },
+                flags: { customer: 'fake' },
+                log: 'Faked a demo (nailed it)',
+                outcome: {
+                  art: 'react_founder_smug',
+                  text: 'You point your phone at Gail\'s trainer and say "beep... lie detected." He confesses on the spot. Gail signs for $14,000. You have invented nothing, and also invoice #001.',
+                },
+              },
+              lose: {
+                effects: { cash: -3000, rep: -2, chaos: 3 },
+                flags: { customer: 'caught' },
+                log: 'Faked a demo (got caught)',
+                outcome: {
+                  art: 'react_customer_stare',
+                  text: '"Beep... lie detected." The trainer did do legs. He shows everyone. He shows them twice. Gail blows the whistle, slowly, for eleven full seconds. Every gym in the county now has your photo by the door, and Gail wants her $3,000 deposit back.',
+                },
+              },
             },
           },
           {
             dir: 'right',
             label: 'Be honest',
             short: 'Honest',
-            hint: 'Lose the sale. Gain trust.',
-            effects: { rep: 3, chaos: -1 },
+            hint: 'Lose the sale. Gain a reputation.',
+            effects: { cash: -2000, rep: 2, chaos: -1 },
             flags: { customer: 'honest' },
             log: 'Told Gail the truth',
             outcome: {
               art: 'react_customer_stare',
-              text: 'Gail stares at you for eleven full seconds. "Nobody\'s ever told me no." No sale. But she tells all 40 gyms you\'re "the honest one."',
+              text: 'Gail stares at you for eleven full seconds. "Nobody\'s ever told me no." No sale, and somehow you paid for her $2,000 smoothie order (forty gyms\' worth). But she tells all 40 gyms you\'re "the honest one."',
             },
           },
         ],
@@ -274,41 +346,55 @@
         choices: [
           {
             dir: 'left',
-            label: 'Give them real access',
-            short: 'Full access',
-            hint: 'Great work... then the database.',
-            effects: { cash: -1000, rep: 1, chaos: 3 },
-            flags: { intern: 'access' },
-            log: 'Gave the intern real access',
+            label: 'Rent Skyler out to Gail\'s gyms',
+            short: 'Rented out',
+            hint: 'An intern is a resource. Allegedly.',
+            effects: { cash: 7000, rep: -1, chaos: 1 },
+            flags: { intern: 'rented' },
+            log: 'Rented the intern out as a personal trainer',
             outcome: {
-              art: 'react_intern_proud',
-              text: 'By lunch, Skyler has fixed 30 bugs and made the logo 40% friendlier. By 3pm they\'ve "cleaned up a huge messy file called production." The database is gone. Skyler is so proud of all the free space.',
+              art: 'react_founder_smug',
+              text: 'Skyler is now a personal trainer. Skyler has never touched a dumbbell. Their first client is the trainer from the leg-day thing. Gail pays $7,000 and calls it "an experience".',
             },
           },
           {
             dir: 'up',
-            label: 'Make them co-founder (10%)',
-            short: 'Co-founder',
-            hint: 'A future regret. Legally binding.',
-            effects: { rep: 1, chaos: 1 },
-            flags: { intern: 'cofounder' },
-            log: 'Made the intern a 10% co-founder',
-            outcome: {
-              art: 'react_intern_glitter',
-              text: 'Skyler signs the paperwork in glitter pen. First executive decision: a nap pod. Second: a company anthem. Somewhere in the future, a lawyer feels a disturbance.',
+            label: 'Give them the keys to everything',
+            short: 'Full access',
+            hint: 'Hidden genius, or a very clean database.',
+            gamble: {
+              bias: 0,
+              win: {
+                effects: { cash: 6000, rep: 3, chaos: 1 },
+                flags: { intern: 'access' },
+                log: 'Gave the intern full access (genius)',
+                outcome: {
+                  art: 'react_intern_glitter',
+                  text: 'By lunch Skyler has fixed 30 bugs, made the logo 40% friendlier, and sold the old logo to their uncle for $6,000. They\'d like a title. They choose "Wizard".',
+                },
+              },
+              lose: {
+                effects: { cash: -3000, chaos: 4 },
+                flags: { intern: 'deleted' },
+                log: 'Gave the intern full access (database gone)',
+                outcome: {
+                  art: 'react_intern_proud',
+                  text: 'By 3pm Skyler has "cleaned up a huge messy file called production." The database is gone. The backup is gone. Skyler is so proud of all the free space. Restoring it costs $3,000.',
+                },
+              },
             },
           },
           {
             dir: 'right',
-            label: 'Coffee duty',
+            label: 'Coffee duty. And actually pay them.',
             short: 'Coffee duty',
-            hint: 'Safe. But you might miss a hidden genius.',
-            effects: { chaos: -1 },
+            hint: 'Safe and decent. You might miss a hidden genius.',
+            effects: { cash: -1000, rep: 1, chaos: -1 },
             flags: { intern: 'coffee' },
-            log: 'Put the intern on coffee duty',
+            log: 'Put the intern on (paid) coffee duty',
             outcome: {
               art: 'react_intern_coffee',
-              text: 'Skyler makes a flawless oat-milk flat white. Unrelated: their weekend side project just hit #1 on every coding site on Earth. You\'ll never know. Great coffee, though.',
+              text: 'Skyler makes a flawless oat-milk flat white and thanks you for the $1,000 like it\'s a kidney. Unrelated: their weekend side project just hit #1 on every coding site on Earth. Great coffee, though.',
             },
           },
         ],
@@ -318,6 +404,7 @@
 
   // ---------------------------------------------------------------------------
   // Mid-level combos: fire once, right after the choice that completes them.
+  // Wildcards set their flags only on the result that happened (JACKPOT or BUST).
   // ---------------------------------------------------------------------------
   const COMBOS = [
     {
@@ -326,17 +413,17 @@
       title: 'The Blorp Jingle',
       art: 'combo_jingle',
       stage: { shot: 'square' },
-      effects: { rep: 3, chaos: 2 },
-      text: 'Gravel Smoothie writes you a jingle. It\'s nine seconds long. It\'s just "Blorp! Blorp! Drink your water! Blorp!" It\'s playing at the bowling alley. It\'s playing at the dentist. A local baby\'s first word was "blorp".',
+      effects: { cash: 2000, rep: 3 },
+      text: 'Gravel Smoothie writes you a jingle. It\'s nine seconds long. It\'s just "Blorp! Blorp! Drink your water! Blorp!" It\'s playing at the bowling alley. It\'s playing at the dentist. A local baby\'s first word was "blorp". The baby\'s parents send $2,000 in royalties, out of fear.',
     },
     {
       id: 'paper',
-      when: (f) => f.name === 'synergyze' && f.garage === 'office',
+      when: (f) => f.name === 'synergyze' && f.garage === 'sublet',
       title: 'Amazing on Paper',
       art: 'combo_paper',
       stage: { shot: 'office' },
-      effects: { cash: (s) => -Math.max(0, s.cash - 300), rep: 1, chaos: 2 },
-      text: 'Synergyze. Glass office. Standing desks. A kombucha tap you didn\'t ask for but did sign for. The pitch deck has never looked better. Your bank app has started sending thoughts and prayers. You\'re broke by Thursday.',
+      effects: { cash: -8000, rep: 1, chaos: 1 },
+      text: 'Synergyze Co-Working gets a glass front office. Standing desks. A kombucha tap you didn\'t ask for but did sign for. The pitch deck has never looked better. Your bank app has started sending thoughts and prayers.',
     },
     {
       id: 'big_heart',
@@ -344,74 +431,115 @@
       title: 'Small Startup With Big Heart',
       art: 'combo_big_heart',
       stage: { shot: 'post_office' },
-      effects: { cash: 1000, rep: 3 },
-      text: 'The local paper puts you on the front page: "SMALL STARTUP WITH BIG HEART." Mom buys 60 copies and laminates one for the fridge. A retired dentist mails you $1,000 "for being decent."',
+      effects: { cash: 2000, rep: 2 },
+      text: 'The local paper puts you on the front page: "SMALL STARTUP WITH BIG HEART." Mom buys 60 copies and laminates one for the fridge. A retired dentist mails you $2,000 "for being decent."',
     },
     {
       id: 'demo_disaster',
-      when: (f) => f.customer === 'fake' && f.intern === 'access',
+      when: (f) => f.customer === 'fake' && f.intern === 'deleted',
       title: 'Live Demo, Live Disaster',
       art: 'combo_demo_disaster',
       stage: { shot: 'town_hall' },
-      effects: { cash: -12000, rep: -3, chaos: 3 },
-      text: 'Worst possible timing: Gail was back for a second demo, with her whole board. Mid "beep... lie detected", Skyler deleted the database. The app vanished in front of twelve executives. Gail wants a refund. And a lawyer. You don\'t have a lawyer. You have Skyler.',
+      effects: { cash: -10000, rep: -3, chaos: 3 },
+      text: 'Worst possible timing: Gail was back for a second demo, with her whole board. Mid "beep... lie detected", the database vanished. The app vanished. Skyler waved. Gail wants a refund. And a lawyer. You don\'t have a lawyer. You have Skyler.',
     },
   ];
 
   // ---------------------------------------------------------------------------
+  // Game over. Checked after every card: the first line crossed ends the run.
+  // ---------------------------------------------------------------------------
+  const FAILS = {
+    combustion: {
+      title: 'Spontaneous Combustion',
+      tagline: 'Chaos hit 10',
+      test: (s) => s.chaos >= METER_MAX,
+      art: 'fail_combustion',
+      stage: { shot: 'home_front', hour: 22 },
+      text: 'It started with a small "pop" behind the dryer. The laptop server, the goat, the kombucha tap and a 14-minute song about a sandwich all reached critical mass at once. The fire department calls it "honestly kind of impressive". {co} is a crater with a gift shop.',
+    },
+    bankrupt: {
+      title: 'Bankrupt',
+      tagline: 'Cash hit $0',
+      test: (s) => s.cash <= 0,
+      art: 'fail_bankrupt',
+      stage: { shot: 'home_front', hour: 19 },
+      text: 'Your card is declined at the vending machine. Then by the vending machine\'s manager. {co} is sold at auction for $43 and a coupon. The buyer is Mom. She\'s keeping it on the fridge.',
+    },
+    forgotten: {
+      title: 'Forgotten',
+      tagline: 'Rep hit 0',
+      test: (s) => s.rep <= 0,
+      art: 'fail_forgotten',
+      stage: { shot: 'square', hour: 18 },
+      text: 'Nobody hates {co}. Nobody remembers it. Your own app sends you a reminder to drink water, then asks who you are. Even Mom introduces you as "my child, who does... computers?"',
+    },
+  };
+  const FAIL_ORDER = ['combustion', 'bankrupt', 'forgotten'];
+
+  // ---------------------------------------------------------------------------
   // Friday Review endings. Rules are checked in ENDING_ORDER; first match wins.
-  // The last rule is a catch-all, so every path lands on exactly one ending.
-  // Run `node tools/paths.js` after changing numbers to see all 81 paths.
+  // The ending grid: Rep HIGH endings (Unicorn, Viral, Broke but Legit, Wholesome) are the
+  // loved companies; without high Rep you're Fake It (rich) or Total Meltdown
+  // (the survivable bottom, on to Mom's basement). Meltdown is the catch-all.
   // ---------------------------------------------------------------------------
   const ENDINGS = {
-    meltdown: {
-      title: 'Total Meltdown',
-      tagline: 'Low everything',
-      rule: (l) => l.cash === 'LOW',
-      ruleText: 'Cash LOW, Rep not high',
-      art: 'end_meltdown',
-      stage: { shot: 'home_front', day: 5, hour: 22 },
-      text: 'The money\'s gone. The reputation\'s gone. The intern\'s gone (they took the plant). {co} is now a cautionary tale told at other startups\' offsites. But listen... Mom called. The basement\'s free.',
-      bonus: 'Basement Bonus unlocked: pancakes, a futon, and a small envelope with your name on it.',
-    },
-    broke: {
-      title: 'Broke but Legit',
-      tagline: 'Low Cash, high Rep',
-      rule: (l) => l.cash === 'LOW' && l.rep === 'HIGH',
-      ruleText: 'Cash LOW, Rep HIGH',
-      art: 'end_broke',
-      stage: { shot: 'home_front', day: 5, hour: 19.5 },
-      text: 'You have {cash} and a spotless reputation. Everyone in town trusts {co}. Your landlord respects you deeply. Your landlord would also like rent.',
+    unicorn: {
+      title: 'Unicorn',
+      tagline: 'You won Week One',
+      rule: (l) => l.cash === 'HIGH' && l.rep === 'HIGH' && l.chaos === 'MID',
+      ruleText: 'Cash HIGH, Rep HIGH, Chaos MID (just enough)',
+      art: 'end_unicorn',
+      stage: { shot: 'overview', day: 5, hour: 20 },
+      text: 'Money in the bank. A town that loves you. Just enough chaos to look exciting in a photo. {co} is, on paper and in real life, a real company. Devin has already ordered a gold hoodie. It\'s for you.',
     },
     viral: {
       title: 'Accidental Viral',
       tagline: 'High Chaos, high Rep',
-      rule: (l) => l.chaos === 'HIGH' && l.rep === 'HIGH',
-      ruleText: 'Chaos HIGH, Rep HIGH',
+      rule: (l) => l.rep === 'HIGH' && l.chaos === 'HIGH',
+      ruleText: 'Rep HIGH, Chaos HIGH',
       art: 'end_viral',
       stage: { shot: 'overview', day: 5, hour: 20.5 },
       text: 'Nobody knows what {co} does, but they really, really love it. You\'re trending in three countries. Your phone is hot to the touch. So is the laptop on the shelf.',
     },
+    broke: {
+      title: 'Broke but Legit',
+      tagline: 'Low Cash, high Rep',
+      rule: (l) => l.rep === 'HIGH' && l.cash === 'LOW',
+      ruleText: 'Rep HIGH, Cash LOW',
+      art: 'end_broke',
+      stage: { shot: 'home_front', day: 5, hour: 19.5 },
+      text: 'You have {cash} and a spotless reputation. Everyone in town trusts {co}. Your landlord respects you deeply. Your landlord would also like rent.',
+    },
+    meltdown: {
+      title: 'Total Meltdown',
+      tagline: 'Alive, technically',
+      rule: () => true,
+      ruleText: 'Everything else: nothing high, nothing working',
+      art: 'end_meltdown',
+      stage: { shot: 'home_front', day: 5, hour: 22 },
+      text: 'Nothing exploded. Nothing worked either. Not the money, not the reputation, not the intern (they left, and they took the plant). {co} is now a cautionary tale told at other startups\' offsites. But listen... Mom called. The basement\'s free.',
+      bonus: 'Basement Bonus unlocked: pancakes, a futon, and a small envelope with your name on it.',
+    },
     fakeit: {
       title: 'Fake It Till You Make It',
-      tagline: 'High Cash, high Chaos',
-      rule: (l) => l.chaos === 'HIGH' || (l.cash === 'HIGH' && l.rep !== 'HIGH'),
-      ruleText: 'Chaos HIGH, or Cash HIGH without high Rep',
+      tagline: 'High Cash, low trust',
+      rule: (l) => l.cash === 'HIGH',
+      ruleText: 'Cash HIGH, Rep not high',
       art: 'end_fakeit',
       stage: { shot: 'town_hall', day: 5, hour: 20 },
       text: 'Your bank account is up. Your grip on reality is down. {co} has customers, revenue, and at least one feature that does not exist. Yet.',
     },
     wholesome: {
       title: 'The Wholesome Startup',
-      tagline: 'High Rep, low Chaos',
-      rule: () => true, // catch-all: not broke, Chaos under control
-      ruleText: 'Cash OK, Chaos under control',
+      tagline: 'High Rep, Chaos under control',
+      rule: (l) => l.rep === 'HIGH',
+      ruleText: 'Rep HIGH, Chaos under control',
       art: 'end_wholesome',
       stage: { shot: 'square', day: 5, hour: 19 },
       text: 'You didn\'t get rich, but a stranger hugged you at the farmers\' market. Twice. People trust {co}. Even the dog park group chat only has nice things to say.',
     },
   };
-  const ENDING_ORDER = ['viral', 'broke', 'meltdown', 'fakeit', 'wholesome'];
+  const ENDING_ORDER = ['unicorn', 'viral', 'broke', 'wholesome', 'fakeit', 'meltdown'];
 
   // ---------------------------------------------------------------------------
   // Level 2: Month One. One opening per ending.
@@ -423,6 +551,64 @@
     intro: 'Your Friday Review sealed it. Here\'s what Month One throws at you.',
     stage: { shot: 'overview', day: 29, hour: 8 },
     scenes: {
+      unicorn: {
+        id: 'magazine_cover',
+        day: 'Month One',
+        title: 'The Magazine Cover',
+        stage: { shot: 'post_office', day: 29, hour: 10 },
+        cast: ['char_founder'],
+        prop: 'prop_magazine',
+        text:
+          '<b>Tri-County Business Monthly</b> wants {co} on the cover of its "30 Under 30 Minutes" issue. ' +
+          'The photographer has one rule: "Bring a prop that says who you are." Devin has brought a live horse, just in case.',
+        choices: [
+          {
+            dir: 'left',
+            label: 'Sell the cover as an ad',
+            short: 'Sold the cover',
+            hint: 'Your face, sponsored by a mattress store.',
+            effects: { cash: 8000, rep: -1, chaos: 1 },
+            outcome: {
+              art: 'react_founder_smug',
+              text: 'The cover reads "{co}: SLEEP ON IT" over a mattress. Your face is in the bottom corner, small, like a warning label. The mattress store pays $8,000 and sends a mattress. It does not fit through the door.',
+            },
+          },
+          {
+            dir: 'up',
+            label: 'Shoot it on the horse',
+            short: 'The horse',
+            hint: 'Iconic. Or a hospital visit.',
+            gamble: {
+              bias: 0,
+              win: {
+                effects: { cash: 3000, rep: 3, chaos: 1 },
+                outcome: {
+                  art: 'react_founder_proud',
+                  text: 'The horse rears at exactly the right moment. The photo goes everywhere. It is the most powerful image of a water-reminder app in human history. Someone buys the print for $3,000.',
+                },
+              },
+              lose: {
+                effects: { cash: -4000, rep: -1, chaos: 3 },
+                outcome: {
+                  art: 'react_founder_panic',
+                  text: 'The horse has opinions about flash photography. The cover photo is mostly hoof. The horse\'s owner sends a $4,000 invoice for "emotional damages" and a separate one for the horse.',
+                },
+              },
+            },
+          },
+          {
+            dir: 'right',
+            label: 'Put Mom on the cover',
+            short: 'Mom\'s cover',
+            hint: 'She did name half the companies in this town.',
+            effects: { cash: -1000, rep: 3, chaos: -1 },
+            outcome: {
+              art: 'react_mom_beaming',
+              text: 'Mom poses with a casserole and the business cards. The headline reads "THE WOMAN BEHIND {co}". She buys 200 copies ($1,000) and signs them for the mail carrier.',
+            },
+          },
+        ],
+      },
       wholesome: {
         id: 'fan_letter',
         day: 'Month One',
@@ -740,11 +926,31 @@
     return applied;
   }
 
-  function choose(state, choice) {
-    Object.assign(state.flags, choice.flags || {});
+  // Wildcard odds in percent, from the meters (see DECISION RULES).
+  function odds(state, choice) {
+    if (!choice || !choice.gamble) return null;
+    const p = ODDS.base + ODDS.perPoint * (state.rep - state.chaos) + (choice.gamble.bias || 0);
+    return Math.max(ODDS.min, Math.min(ODDS.max, p));
+  }
+
+  // The part of a choice that happened: the choice itself, or a Wildcard's JACKPOT/BUST branch.
+  function branch(choice, won) {
+    return choice.gamble ? (won ? choice.gamble.win : choice.gamble.lose) : choice;
+  }
+
+  // Applies a choice. For a Wildcard pass won = true (JACKPOT) or false (BUST).
+  function choose(state, choice, won) {
+    const b = branch(choice, won);
+    Object.assign(state.flags, choice.flags || {}, (b !== choice && b.flags) || {});
     if (choice.company) state.company = choice.company;
-    if (choice.log) state.log.push(choice.log);
-    return applyEffects(state, choice.effects);
+    const log = b.log || choice.log;
+    if (log) state.log.push(log);
+    return applyEffects(state, b.effects);
+  }
+
+  // Returns the game-over id once a fail line is crossed, else null.
+  function failCheck(state) {
+    return FAIL_ORDER.find((id) => FAILS[id].test(state)) || null;
   }
 
   // Returns combos that became true and have not fired yet (marks them fired).
@@ -781,8 +987,8 @@
   }
 
   const STORY = {
-    START, METER_MAX, LEVELS, ART, IDEA, TITLE_STAGE, WEEK_ONE, COMBOS, ENDINGS, ENDING_ORDER, MONTH_ONE, LOGO_HAGGLE, TBC,
-    newState, evalEffects, applyEffects, choose, newCombos, levels, pickEnding, fmtCash, fill,
+    START, METER_MAX, LEVELS, ODDS, ART, IDEA, TITLE_STAGE, WEEK_ONE, COMBOS, FAILS, FAIL_ORDER, ENDINGS, ENDING_ORDER, MONTH_ONE, LOGO_HAGGLE, TBC,
+    newState, evalEffects, applyEffects, odds, branch, choose, failCheck, newCombos, levels, pickEnding, fmtCash, fill,
   };
 
   root.STORY = STORY;

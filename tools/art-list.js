@@ -6,21 +6,30 @@ const S = require('../story.js');
 
 const used = {};
 const mark = (id, where) => (used[id] = used[id] || new Set()).add(where);
+// A choice's outcome art, or both Wildcard results (JACKPOT / BUST).
+const markChoice = (c, where) => {
+  if (c.outcome) mark(c.outcome.art, `${where} → ${c.short}`);
+  if (c.gamble) {
+    mark(c.gamble.win.outcome.art, `${where} → ${c.short} (jackpot)`);
+    mark(c.gamble.lose.outcome.art, `${where} → ${c.short} (bust)`);
+  }
+};
 
 S.WEEK_ONE.scenes.forEach((sc) => {
   const where = `L1 ${sc.day}: ${sc.title}`;
   sc.cast.forEach((id) => mark(id, where));
   if (sc.prop) mark(sc.prop, where);
-  sc.choices.forEach((c) => mark(c.outcome.art, `${where} → ${c.short}`));
+  sc.choices.forEach((c) => markChoice(c, where));
 });
 Object.values(S.MONTH_ONE.scenes).forEach((sc) => {
   const where = `L2: ${sc.title}`;
   sc.cast.forEach((id) => mark(id, where));
   if (sc.prop) mark(sc.prop, where);
-  sc.choices.forEach((c) => c.outcome && mark(c.outcome.art, `${where} → ${c.short}`));
+  sc.choices.forEach((c) => markChoice(c, where));
 });
 S.COMBOS.forEach((c) => mark(c.art, `Combo: ${c.title}`));
 Object.values(S.ENDINGS).forEach((e) => mark(e.art, `Ending: ${e.title}`));
+Object.values(S.FAILS).forEach((f) => mark(f.art, `Game over: ${f.title}`));
 mark(S.LOGO_HAGGLE.art, 'L2: The Investor Calls → Negotiate mini-game');
 mark('char_founder', 'Friday Review');
 
@@ -29,7 +38,7 @@ const GROUPS = [
   ['reaction', 'Reactions (outcome cards)', 'Same characters, exaggerated expression/pose, transparent PNG, ~800×1000.'],
   ['prop', 'Props', 'Single object, transparent PNG, ~512×512. Shown small and tilted near the panel.'],
   ['combo', 'Combo cards', 'Gag illustration, ~1200×800, shown like a polaroid over the town. The "COMBO!" burst is drawn by the game.'],
-  ['ending', 'Ending cards', 'Hero illustration, ~1200×800, shown like a polaroid over the town. One per Friday Review ending.'],
+  ['ending', 'Ending cards', 'Hero illustration, ~1200×800, shown like a polaroid over the town. One per Friday Review ending, plus one per game over.'],
 ];
 
 const unused = Object.keys(S.ART).filter((id) => !used[id]);

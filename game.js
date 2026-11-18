@@ -5,6 +5,7 @@
 
   const S = window.STORY;
   const FAST = /[?&]fast=1/.test(location.search); // skips animations (automated path testing)
+  const LUCK = (location.search.match(/[?&]luck=(win|lose)/) || [])[1]; // ?luck=win|lose forces Wildcard results (testing)
   const T = (ms) => (FAST ? 0 : ms);
 
   const $ = (sel, el = document) => el.querySelector(sel);
@@ -17,6 +18,9 @@
   const ICON = { cash: '💰', rep: '🌟', chaos: '🔥' };
   const NAME = { cash: 'Cash', rep: 'Rep', chaos: 'Chaos' };
   const KIND_LABEL = { character: 'CHAR', reaction: 'REACT', prop: 'PROP', combo: 'COMBO ART', ending: 'ENDING ART' };
+  const STANCE = { left: 'Hustle', up: 'Wildcard', right: 'Heart' };
+  // How close a meter can get to its fail line before the HUD starts warning.
+  const DANGER = { cash: (v) => v < 4000, rep: (v) => v <= 1, chaos: (v) => v >= 8 };
   const KEYMAP = { ArrowLeft: 'left', a: 'left', A: 'left', 1: 'left', ArrowUp: 'up', w: 'up', W: 'up', 2: 'up', ArrowRight: 'right', d: 'right', D: 'right', 3: 'right' };
 
   let state = S.newState();
@@ -92,6 +96,7 @@
     m.querySelector('.meter-val').textContent = fmtVal(k, Math.round(v));
     if (k === 'cash') m.querySelector('.meter-fill').style.width = Math.min(100, v / 200) + '%'; // $20k = full bar
     else m.querySelectorAll('.pip').forEach((p, i) => p.classList.toggle('on', i < v));
+    m.classList.toggle('is-danger', DANGER[k](v));
   }
 
   function setHud(label) {
@@ -216,7 +221,7 @@
 
   // While a choice is armed (swiping, hover, keyboard focus) the meters it would move show ▲/▼.
   function previewMeters(choice) {
-    const e = choice && !choice.minigame ? S.evalEffects(state, choice.effects) : {};
+    const e = choice && !choice.minigame && !choice.gamble ? S.evalEffects(state, choice.effects) : {};
     for (const k of KEYS) {
       const m = meterEl(k), pv = m.querySelector('.meter-pv'), d = e[k];
       if (d) {
@@ -346,7 +351,7 @@
   function renderControls(spec) {
     if (spec.choices) {
       controls.innerHTML =
-        '<p class="swipe-hint">Swipe the card <b>← ↑ →</b> or tap a choice<span class="desk-only"> · keys ← ↑ → or 1 2 3</span></p>' +
+        '<p class="swipe-hint"><b>← Hustle</b> · <b>↑ Wildcard</b> · <b>→ Heart</b><span class="desk-only"> · swipe, tap, or keys ← ↑ → / 1 2 3</span></p>' +
         spec.choices.map(choiceButton).join('');
       controls.querySelectorAll('.choice').forEach((b) => {
         const c = spec.choices.find((x) => x.dir === b.dataset.dir);
@@ -369,7 +374,10 @@
   function choiceButton(c) {
     let fx;
     if (c.minigame) fx = '<i class="fx">🎨 mini-game</i>';
-    else {
+    else if (c.gamble) {
+      const o = S.odds(state, c);
+      fx = `<i class="fx fx-odds ${o >= 60 ? 'odds-good' : o <= 40 ? 'odds-bad' : ''}" title="Wildcard: ${o}% chance of a jackpot, ${100 - o}% chance of a bust">🎲<b>${o}%</b></i>`;
+    } else {
       const e = S.evalEffects(state, c.effects);
       fx = KEYS.filter((k) => e[k])
         .map((k) => {
@@ -381,7 +389,7 @@
     return (
       `<button class="choice dir-${c.dir}" data-dir="${c.dir}" type="button">` +
       `<span class="choice-arrow" aria-hidden="true">${ARROW[c.dir]}</span>` +
-      `<span class="choice-main"><span class="choice-label">${c.label}</span><span class="choice-hint">${c.hint}</span></span>` +
+      `<span class="choice-main"><span class="choice-stance">${STANCE[c.dir]}</span><span class="choice-label">${c.label}</span><span class="choice-hint">${c.hint}</span></span>` +
       `<span class="choice-side"><span class="choice-fx">${fx}</span><kbd class="keycap">${KEYCAP[c.dir]}</kbd></span>` +
       `</button>`
     );
@@ -426,6 +434,13 @@
   }
 
   function advance() {
+    // Crossing a fail line ends the run before the next card.
+    const fail = !state.over && S.failCheck(state);
+    if (fail) {
+      state.over = fail;
+      queue = [];
+      return failCard(fail);
+    }
     const next = queue.shift();
     if (next) next();
   }
@@ -515,7 +530,7 @@
         `<div class="card-body center">` +
         `<p class="eyebrow">Working title</p>` +
         `<h1 class="logo">Startup <span>Ladder</span></h1>` +
-        `<p class="card-text">You have a garage in Pebblewick, a questionable business idea and <b>$10,000</b>. What could possibly go wrong?</p>` +
+        `<p class="card-text">You have a garage in Pebblewick, a questionable business idea and <b>${S.fmtCash(S.START.cash)}</b>. What could possibly go wrong?</p>` +
         `<p class="idea">💡 <b>The idea:</b> ${S.IDEA}</p>` +
         `<p class="stage-status" aria-live="polite"></p>` +
         `</div>`,
@@ -572,10 +587,17 @@
   }
 
   function chooseWeek(scene, choice) {
-    const deltas = S.choose(state, choice);
+    if (choice.gamble) {
+      queue.unshift(() => gambleCard(scene, choice, (won) => afterWeek(scene, choice, S.choose(state, choice, won), won)));
+      return advance();
+    }
+    afterWeek(scene, choice, S.choose(state, choice));
+  }
+
+  function afterWeek(scene, choice, deltas, won) {
     const combos = S.newCombos(state);
-    queue.unshift(() => outcomeCard(scene, choice, deltas), ...combos.map((c) => () => comboCard(c)));
-    advance();
+    queue.unshift(...combos.map((c) => () => comboCard(c)));
+    outcomeCard(scene, choice, deltas, null, won); // shown directly: a fail line is checked after you've seen it
   }
 
   function chooseMonth(scene, choice) {
@@ -584,22 +606,33 @@
       queue.unshift(() => haggleCard(scene, choice));
       return advance();
     }
+    if (choice.gamble) {
+      queue.unshift(() =>
+        gambleCard(scene, choice, (won) => {
+          state.month.choice = `${choice.short} (${won ? 'jackpot' : 'bust'})`;
+          const deltas = S.applyEffects(state, S.branch(choice, won).effects);
+          outcomeCard(scene, choice, deltas, null, won);
+        })
+      );
+      return advance();
+    }
     const deltas = S.applyEffects(state, choice.effects);
-    queue.unshift(() => outcomeCard(scene, choice, deltas));
-    advance();
+    outcomeCard(scene, choice, deltas);
   }
 
-  function outcomeCard(scene, choice, deltas, outcome) {
-    const o = outcome || choice.outcome;
+  function outcomeCard(scene, choice, deltas, outcome, won) {
+    const gambled = choice.gamble && won !== undefined;
+    const o = outcome || (gambled ? S.branch(choice, won).outcome : choice.outcome);
+    const badge = gambled ? `<p class="gamble-badge ${won ? 'is-win' : 'is-bust'}">${won ? '🎰 JACKPOT!' : '💀 BUST!'}</p>` : '';
     show({
       kind: 'outcome',
       id: `${scene.id}:${choice.dir}`,
-      tone: 'dir-' + choice.dir,
+      tone: 'dir-' + choice.dir + (gambled ? (won ? ' gamble-win' : ' gamble-bust') : ''),
       cont: 'Continue',
       stage: o.stage,
       html:
         `<div class="card-art">${slot(o.art, 'slot-react')}</div>` +
-        `<div class="card-body"><p class="eyebrow">You chose</p><h2 class="card-title">${choice.label}</h2>` +
+        `<div class="card-body">${badge}<p class="eyebrow">You chose</p><h2 class="card-title">${choice.label}</h2>` +
         `${deltaChips(deltas)}<p class="card-text">${S.fill(o.text, state)}</p></div>`,
       onShow: () => showImpact(deltas),
     });
@@ -714,6 +747,84 @@
         controls.querySelector('.btn-stop').addEventListener('click', stop);
         el.querySelector('.haggle-bar').addEventListener('pointerdown', stop);
       },
+    });
+  }
+
+  // Wildcard: a needle sweeps the odds bar and lands in JACKPOT (left part, as wide as the odds) or BUST.
+  function gambleCard(scene, choice, resolve) {
+    const o = S.odds(state, choice);
+    const won = LUCK ? LUCK === 'win' : Math.random() * 100 < o;
+    const target = won ? o * (0.15 + Math.random() * 0.7) : o + (100 - o) * (0.15 + Math.random() * 0.7);
+    const DUR = 2200;
+    let raf = 0;
+    let done = false;
+
+    function land() {
+      if (done) return;
+      done = true;
+      cancelAnimationFrame(raf);
+      const needle = card && card.querySelector('.needle');
+      if (needle) needle.style.left = target + '%';
+      const res = card && card.querySelector('.gamble-result');
+      if (res) {
+        res.textContent = won ? 'JACKPOT!' : 'BUST!';
+        res.className = 'gamble-result ' + (won ? 'is-win' : 'is-bust');
+      }
+      if (FAST) return resolve(won);
+      setTimeout(() => {
+        busy = true;
+        flyOut('up').then(() => resolve(won));
+      }, 1000);
+    }
+
+    show({
+      kind: 'gamble',
+      id: `${scene.id}:gamble`,
+      noSwipe: true,
+      tone: 'gamble',
+      html:
+        `<div class="card-body center"><p class="eyebrow">Wildcard</p><h2 class="card-title">${choice.label}</h2>` +
+        `<p class="card-text">${choice.hint}</p>` +
+        `<div class="gamble"><div class="gamble-bar"><span class="zone-win" style="width:${o}%">JACKPOT ${o}%</span>` +
+        `<span class="zone-bust" style="width:${100 - o}%">BUST ${100 - o}%</span><span class="needle"></span></div>` +
+        `<p class="gamble-result" aria-live="polite">🎲 Rolling…</p>` +
+        `<p class="gamble-why">Odds = 50% + 5% × (Rep ${state.rep} − Chaos ${state.chaos})${choice.gamble.bias ? ` ${choice.gamble.bias > 0 ? '+' : '−'} ${Math.abs(choice.gamble.bias)}% for this card` : ''}</p></div></div>`,
+      controlsHtml: '<p class="swipe-hint">Fate is deciding. Tap to skip.</p>',
+      onKey: () => (land(), true),
+      onShow: (el) => {
+        if (FAST) return land();
+        const start = performance.now();
+        const tick = (now) => {
+          const t = Math.min(1, (now - start) / DUR);
+          const ease = 1 - Math.pow(1 - t, 3);
+          const wobble = (1 - ease) * 48 * Math.sin(t * Math.PI * 7);
+          const pos = Math.max(0, Math.min(100, target + wobble));
+          const needle = el.querySelector('.needle');
+          if (needle) needle.style.left = pos + '%';
+          if (t < 1) raf = requestAnimationFrame(tick);
+          else land();
+        };
+        raf = requestAnimationFrame(tick);
+        el.addEventListener('pointerdown', land);
+      },
+    });
+  }
+
+  function failCard(id) {
+    const f = S.FAILS[id];
+    show({
+      kind: 'fail',
+      id,
+      tone: 'fail',
+      hud: 'GAME OVER',
+      cont: 'Try again ↻',
+      stage: f.stage,
+      html:
+        `<div class="card-art">${slot(f.art, 'slot-wide')}</div>` +
+        `<div class="card-body center"><p class="eyebrow">Game over · ${f.tagline}</p><h2 class="card-title big">${f.title}</h2>` +
+        `<p class="card-text">${S.fill(f.text, state)}</p>${meterSummary()}` +
+        `<p class="why">Fail lines: Cash $0, Rep 0, Chaos 10.</p></div>`,
+      onContinue: startGame,
     });
   }
 
