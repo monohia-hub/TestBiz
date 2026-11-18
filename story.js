@@ -129,9 +129,15 @@
     id: 'week1',
     number: 1,
     title: 'Week One',
-    intro:
-      'Four days. Four decisions. ← hustles for money, → follows your heart, ↑ gambles. ' +
-      'Hit $0, Rep 0 or Chaos 10 and it\'s over. Survive to Friday and the review decides what kind of company you are.',
+    intro: 'Four days. Four choices. Survive to Friday.',
+    // The how-to-play card, one short line each. Shown on the Week One intro.
+    rules: [
+      ['←', 'Hustle', 'Money now. Mess later.'],
+      ['↑', 'Wildcard', 'A gamble. Rep helps, Chaos hurts.'],
+      ['→', 'Heart', 'Do good. It costs you.'],
+      ['💀', 'Lose', 'Cash $0, Rep 0 or Chaos 10.'],
+      ['🦄', 'Win', 'Rich, loved, a bit chaotic.'],
+    ],
     stage: { shot: 'home_front', day: 1, hour: 8 },
     review: { shot: 'home_room', day: 5, hour: 18.5 },
     scenes: [
@@ -144,8 +150,7 @@
         prop: 'prop_name_whiteboard',
         text:
           'Your co-founder Devin wants <b>"Synergyze"</b>. "With a Y. And a Z. Vowels are for legacy brands." ' +
-          'Mom wants <b>"Bob\'s Apps"</b>. Nobody here is called Bob. "It sounds like a man who\'d return your lawnmower." ' +
-          'Or you could let a random word generator decide. It\'s already loaded.',
+          'Mom wants <b>"Bob\'s Apps"</b>. Nobody here is called Bob. "It sounds like a man who\'d return your lawnmower."',
         choices: [
           {
             dir: 'left',
@@ -273,7 +278,7 @@
       },
       {
         id: 'customer',
-        stakes: 'Stakes ×1.25',
+        stakes: 'Bigger stakes',
         day: 'Wednesday',
         title: 'The First Customer',
         stage: { shot: 'square', day: 3, hour: 13 },
@@ -340,7 +345,7 @@
       },
       {
         id: 'intern',
-        stakes: 'Stakes ×1.5 · last call',
+        stakes: 'Biggest stakes',
         day: 'Thursday',
         title: 'The Intern',
         stage: { shot: 'home_room', day: 4, hour: 16 },
@@ -490,6 +495,7 @@
   // ---------------------------------------------------------------------------
   const ENDINGS = {
     unicorn: {
+      short: 'Unicorn',
       title: 'Unicorn',
       tagline: 'You won Week One',
       rule: (l) => l.cash === 'HIGH' && l.rep === 'HIGH' && l.chaos === 'MID',
@@ -499,6 +505,7 @@
       text: 'Money in the bank. A town that loves you. Just enough chaos to look exciting in a photo. {co} is, on paper and in real life, a real company. Devin has already ordered a gold hoodie. It\'s for you.',
     },
     viral: {
+      short: 'Viral',
       title: 'Accidental Viral',
       tagline: 'High Chaos, high Rep',
       rule: (l) => l.rep === 'HIGH' && l.chaos === 'HIGH',
@@ -508,6 +515,7 @@
       text: 'Nobody knows what {co} does, but they really, really love it. You\'re trending in three countries. Your phone is hot to the touch. So is the laptop on the shelf.',
     },
     broke: {
+      short: 'Broke but Legit',
       title: 'Broke but Legit',
       tagline: 'Low Cash, high Rep',
       rule: (l) => l.rep === 'HIGH' && l.cash === 'LOW',
@@ -517,6 +525,7 @@
       text: 'You have {cash} and a spotless reputation. Everyone in town trusts {co}. Your landlord respects you deeply. Your landlord would also like rent.',
     },
     meltdown: {
+      short: 'Meltdown',
       title: 'Total Meltdown',
       tagline: 'Alive, technically',
       rule: () => true,
@@ -527,6 +536,7 @@
       bonus: 'Basement Bonus unlocked: pancakes, a futon, and a small envelope with your name on it.',
     },
     fakeit: {
+      short: 'Fake It',
       title: 'Fake It Till You Make It',
       tagline: 'High Cash, low trust',
       rule: (l) => l.cash === 'HIGH',
@@ -536,6 +546,7 @@
       text: 'Your bank account is up. Your grip on reality is down. {co} has customers, revenue, and at least one feature that does not exist. Yet.',
     },
     wholesome: {
+      short: 'Wholesome',
       title: 'The Wholesome Startup',
       tagline: 'High Rep, Chaos under control',
       rule: (l) => l.rep === 'HIGH',

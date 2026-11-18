@@ -331,6 +331,15 @@ button { font: inherit; color: inherit; }
 .tone-fail .card-body { background: #ffe9ea; box-shadow: inset 0 6px 0 var(--loss), 0 6px 0 var(--ink); }
 .tone-fail .card-title { color: #b4232f; }
 
+/* How-to-play list on the Week One intro */
+.rules { list-style: none; margin: 12px auto 0; padding: 0; max-width: 340px; text-align: left; display: grid; gap: 6px; }
+.rules li { display: grid; grid-template-columns: 28px 74px 1fr; align-items: center; gap: 6px; font: 700 14px/1.25 var(--font-body); }
+.rules .rule-icon { display: grid; place-items: center; width: 28px; height: 28px; border: 2px solid var(--ink); border-radius: 9px; background: #fff; font: 900 15px/1 var(--font-body); }
+.rules li:nth-child(1) .rule-icon { background: var(--left); color: #fff; }
+.rules li:nth-child(2) .rule-icon { background: var(--up); }
+.rules li:nth-child(3) .rule-icon { background: var(--right); color: #fff; }
+.rules b { font: 600 15px/1 var(--font-head); }
+
 /* Ending compass under the meters */
 .compass {
   display: flex; flex-wrap: wrap; align-items: center; gap: 2px 6px; margin-top: 7px; padding: 4px 10px 5px;

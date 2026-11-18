@@ -98,7 +98,7 @@ earned better odds. `node tools/paths.js` prints every card's values so new card
 (Chaos stays near ×1), so the last card of the week swings hardest. Wednesday and Thursday cards carry a red stakes badge.
 
 **Ending compass.** During Week One a strip under the meters says which ending the meters point to right now
-("Heading for: 🫠 Total Meltdown"). While a choice is armed it also shows where that choice would take you, and for a
+("Ending: 🫠 Meltdown"). While a choice is armed it also shows where that choice would take you, and for a
 Wildcard both results (★ jackpot, ✗ bust), including "Game over". It hides at the Friday Review so the verdict is still a reveal.
 
 ### Losing and winning

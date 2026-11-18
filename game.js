@@ -241,7 +241,7 @@
   const resultName = (r) => {
     if (r.fail) return `<span class="cp-fail">${S.ART[S.FAILS[r.fail].art].emoji} Game over</span>`;
     const e = S.ENDINGS[r.ending];
-    return `<span class="cp-${r.ending}">${S.ART[e.art].emoji} ${e.title}</span>`;
+    return `<span class="cp-${r.ending}">${S.ART[e.art].emoji} ${e.short || e.title}</span>`;
   };
   function paintCompass(choice) {
     const el = $('#hud-compass');
@@ -255,7 +255,7 @@
       return;
     }
     next.innerHTML = choice.gamble
-      ? ` → <i>★</i> ${resultName(S.project(state, choice, true))} <i>✗</i> ${resultName(S.project(state, choice, false))}`
+      ? ` → ${resultName(S.project(state, choice, true))} <i>or</i> ${resultName(S.project(state, choice, false))}`
       : ` → ${resultName(S.project(state, choice))}`;
   }
 
@@ -374,7 +374,7 @@
   function renderControls(spec) {
     if (spec.choices) {
       controls.innerHTML =
-        '<p class="swipe-hint"><b>← Hustle</b> · <b>↑ Wildcard</b> · <b>→ Heart</b><span class="desk-only"> · swipe, tap, or keys ← ↑ → / 1 2 3</span></p>' +
+        '<p class="swipe-hint">Swipe or tap<span class="desk-only"> · keys 1 2 3</span></p>' +
         spec.choices.map(choiceButton).join('');
       controls.querySelectorAll('.choice').forEach((b) => {
         const c = spec.choices.find((x) => x.dir === b.dataset.dir);
@@ -386,7 +386,7 @@
       });
     } else if (spec.cont) {
       controls.innerHTML =
-        `<p class="swipe-hint">Swipe or tap the card to continue</p>` +
+        `<p class="swipe-hint">Tap to continue</p>` +
         `<button class="btn-main" type="button">${spec.cont} <kbd class="keycap">Enter</kbd></button>`;
       controls.querySelector('.btn-main').addEventListener('click', () => commit('left'));
     } else {
@@ -553,8 +553,8 @@
         `<div class="card-body center">` +
         `<p class="eyebrow">Working title</p>` +
         `<h1 class="logo">Startup <span>Ladder</span></h1>` +
-        `<p class="card-text">You have a garage in Pebblewick, a questionable business idea and <b>${S.fmtCash(S.START.cash)}</b>. What could possibly go wrong?</p>` +
-        `<p class="idea">💡 <b>The idea:</b> ${S.IDEA}</p>` +
+        `<p class="card-text">A garage. <b>${S.fmtCash(S.START.cash)}</b>. A bad idea. Go.</p>` +
+        `<p class="idea">💡 ${S.IDEA}</p>` +
         `<p class="stage-status" aria-live="polite"></p>` +
         `</div>`,
       onShow: () => stageStatus(),
@@ -586,7 +586,11 @@
       html:
         `<div class="card-art"></div>` +
         `<div class="card-body center"><p class="eyebrow">Level ${level.number}</p>` +
-        `<h2 class="card-title big">${level.title}</h2><p class="card-text">${level.intro}</p></div>`,
+        `<h2 class="card-title big">${level.title}</h2><p class="card-text">${level.intro}</p>` +
+        (level.rules
+          ? `<ul class="rules">${level.rules.map(([icon, name, line]) => `<li><span class="rule-icon">${icon}</span><b>${name}</b><span>${line}</span></li>`).join('')}</ul>`
+          : '') +
+        `</div>`,
     });
   }
 
@@ -713,7 +717,7 @@
         `<div class="card-body center"><p class="eyebrow">Week One ending</p><h2 class="card-title big">${e.title}</h2>` +
         `<p class="tagline">${e.tagline}</p><p class="card-text">${S.fill(e.text, state)}</p>` +
         (e.bonus ? `<div class="bonus">🥞 ${e.bonus}</div>` : '') +
-        `${meterSummary(state.ending.levels)}<p class="why">Verdict rule: ${e.ruleText}</p></div>`,
+        `${meterSummary(state.ending.levels)}<p class="why">Why: ${e.ruleText}</p></div>`,
     });
   }
 
@@ -763,7 +767,7 @@
         `<div class="haggle"><div class="haggle-bar"><span class="needle"></span></div>` +
         `<div class="haggle-ends"><span>Beige</span><span>Peach</span><span>Tangerine</span></div>` +
         `<p class="haggle-result" aria-live="polite"></p></div></div>`,
-      controlsHtml: `<p class="swipe-hint">Tap STOP (or the bar) when the needle is on your colour</p><button class="btn-main btn-stop" type="button">STOP! <kbd class="keycap">Space</kbd></button>`,
+      controlsHtml: `<p class="swipe-hint">Tap STOP on your colour</p><button class="btn-main btn-stop" type="button">STOP! <kbd class="keycap">Space</kbd></button>`,
       onKey: (e) => (e.key === ' ' || e.key === 'Enter' ? (stop(), true) : false),
       onShow: (el) => {
         raf = requestAnimationFrame(tick);
@@ -811,8 +815,8 @@
         `<div class="gamble"><div class="gamble-bar"><span class="zone-win" style="width:${o}%">JACKPOT ${o}%</span>` +
         `<span class="zone-bust" style="width:${100 - o}%">BUST ${100 - o}%</span><span class="needle"></span></div>` +
         `<p class="gamble-result" aria-live="polite">🎲 Rolling…</p>` +
-        `<p class="gamble-why">Odds = 50% + 5% × (Rep ${state.rep} − Chaos ${state.chaos})${choice.gamble.bias ? ` ${choice.gamble.bias > 0 ? '+' : '−'} ${Math.abs(choice.gamble.bias)}% for this card` : ''}</p></div></div>`,
-      controlsHtml: '<p class="swipe-hint">Fate is deciding. Tap to skip.</p>',
+        `<p class="gamble-why">Rep helps. Chaos hurts.</p></div></div>`,
+      controlsHtml: '<p class="swipe-hint">Tap to skip</p>',
       onKey: () => (land(), true),
       onShow: (el) => {
         if (FAST) return land();
@@ -845,8 +849,7 @@
       html:
         `<div class="card-art">${slot(f.art, 'slot-wide')}</div>` +
         `<div class="card-body center"><p class="eyebrow">Game over · ${f.tagline}</p><h2 class="card-title big">${f.title}</h2>` +
-        `<p class="card-text">${S.fill(f.text, state)}</p>${meterSummary()}` +
-        `<p class="why">Fail lines: Cash $0, Rep 0, Chaos 10.</p></div>`,
+        `<p class="card-text">${S.fill(f.text, state)}</p>${meterSummary()}</div>`,
       onContinue: startGame,
     });
   }
